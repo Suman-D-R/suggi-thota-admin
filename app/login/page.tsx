@@ -59,7 +59,7 @@ export default function LoginPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm group-hover:bg-emerald-700 transition-colors">
               <Leaf className="h-5 w-5" />
             </div>
-            <span>Suggi Thota</span>
+            <span>Vitura</span>
           </Link>
         </div>
       </header>
@@ -177,7 +177,7 @@ export default function LoginPage() {
       <footer className="border-t bg-white py-6">
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-slate-500">
-            © 2025 Suggi Thota Admin. All rights reserved.
+            © 2025 Vitura Admin. All rights reserved.
           </p>
         </div>
       </footer>

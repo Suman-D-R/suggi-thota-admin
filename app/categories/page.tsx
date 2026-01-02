@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Categories | Suggi Thota Admin',
+  title: 'Categories | Vitura Admin',
   description: 'Organize your products into categories',
 };
 

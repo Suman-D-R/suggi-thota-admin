@@ -4,10 +4,11 @@ import { Download } from 'lucide-react';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { RevenueChart } from '@/components/revenue-chart';
 import { RecentSales } from '@/components/recent-sales';
+import { ProductView } from '@/components/product-view';
 import { AuthGuard } from '@/components/auth-guard';
 
 export const metadata: Metadata = {
-  title: 'Dashboard | Suggi Thota Admin',
+  title: 'Dashboard | Vitura Admin',
   description: "Overview of your store's performance",
 };
 
@@ -41,6 +42,8 @@ export default function DashboardPage() {
               <RevenueChart />
               <RecentSales />
             </div>
+
+            <ProductView />
           </div>
         </main>
       </div>

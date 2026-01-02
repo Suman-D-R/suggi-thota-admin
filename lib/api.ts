@@ -216,3 +216,52 @@ export const heroBannerAPI = {
   },
 }
 
+// ProductBatch API
+export const productBatchAPI = {
+  // Get all batches with pagination and filters
+  getAll: async (params?: {
+    page?: number
+    limit?: number
+    product?: string
+  }) => {
+    const queryParams: any = {}
+    if (params) {
+      if (params.page !== undefined) queryParams.page = params.page.toString()
+      if (params.limit !== undefined) queryParams.limit = params.limit.toString()
+      if (params.product) queryParams.product = params.product
+    }
+    const response = await apiClient.get('/product-batches', { params: queryParams })
+    return response.data
+  },
+
+  // Get batches by product ID
+  getByProduct: async (productId: string) => {
+    const response = await apiClient.get(`/product-batches/product/${productId}`)
+    return response.data
+  },
+
+  // Get batch by ID
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/product-batches/${id}`)
+    return response.data
+  },
+
+  // Create batch
+  create: async (batchData: any) => {
+    const response = await apiClient.post('/product-batches', batchData)
+    return response.data
+  },
+
+  // Update batch
+  update: async (id: string, batchData: any) => {
+    const response = await apiClient.put(`/product-batches/${id}`, batchData)
+    return response.data
+  },
+
+  // Delete batch
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/product-batches/${id}`)
+    return response.data
+  },
+}
+

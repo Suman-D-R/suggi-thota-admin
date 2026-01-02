@@ -26,7 +26,7 @@ export function SiteHeader() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm group-hover:bg-emerald-700 transition-colors">
               <Leaf className="h-5 w-5" />
             </div>
-            <span>Suggi Thota</span>
+            <span>Vitura</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1.5">
@@ -77,7 +77,7 @@ export function SiteHeader() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">Admin User</p>
-                  <p className="text-xs leading-none text-muted-foreground">admin@suggithota.com</p>
+                  <p className="text-xs leading-none text-muted-foreground">admin@vitura.com</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

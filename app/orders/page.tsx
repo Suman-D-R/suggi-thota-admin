@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { OrderTable } from '@/components/order-table';
 
 export const metadata: Metadata = {
-  title: 'Orders | Suggi Thota Admin',
+  title: 'Orders | Vitura Admin',
   description: 'View and manage customer orders',
 };
 

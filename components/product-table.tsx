@@ -34,31 +34,14 @@ import { productAPI, categoryAPI } from "@/lib/api"
 interface Product {
   _id: string
   name: string
-  description?: string
-  sku?: string
   category?: {
     _id: string
     name: string
   } | string
-  subcategory?: {
-    _id: string
-    name: string
-  } | string
-  price: number
-  originalPrice?: number
-  discount?: number
-  cost?: number
-  stock: number
-  minStock?: number
-  maxStock?: number
+  size?: number
   unit?: string
-  brand?: string
-  weight?: number
   isActive?: boolean
-  isFeatured?: boolean
-  isOutOfStock?: boolean
   images?: string[]
-  thumbnail?: string
   createdAt?: string | Date
   updatedAt?: string | Date
 }
@@ -111,8 +94,6 @@ export function ProductTable() {
 
       if (statusFilter === "active") {
         params.isActive = true
-      } else if (statusFilter === "out_of_stock") {
-        params.isOutOfStock = true
       } else if (statusFilter === "draft") {
         params.isActive = false
       }
@@ -174,13 +155,11 @@ export function ProductTable() {
   }
 
   const getStatus = (product: Product): string => {
-    if (product.isOutOfStock) return "out_of_stock"
     if (!product.isActive) return "draft"
     return "active"
   }
 
   const getProductImage = (product: Product): string => {
-    if (product.thumbnail) return product.thumbnail
     if (product.images && product.images.length > 0) return product.images[0]
     return "/placeholder.svg"
   }
@@ -221,7 +200,7 @@ export function ProductTable() {
           <div className="relative flex-1 md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search products, SKU..."
+              placeholder="Search products..."
               className="pl-10 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -263,7 +242,6 @@ export function ProductTable() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
               </SelectContent>
             </Select>
 
@@ -288,17 +266,11 @@ export function ProductTable() {
               <TableHead className="w-[300px] text-xs font-semibold uppercase tracking-wider text-slate-500 pl-6 h-12">
                 Product
               </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 h-12">SKU</TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 h-12">
                 Category
               </TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 h-12">
-                <div className="flex items-center gap-1 cursor-pointer hover:text-slate-700 group">
-                  Price <ArrowUpDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 h-12">
-                Stock
+                Size & Unit
               </TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500 h-12">
                 Status
@@ -309,7 +281,7 @@ export function ProductTable() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
                     <p className="text-sm text-slate-600">Loading products...</p>
@@ -335,14 +307,8 @@ export function ProductTable() {
                       </div>
                       <div className="flex flex-col">
                         <span className="font-medium text-slate-900 text-sm">{product.name || "Unnamed Product"}</span>
-                        {product.brand && (
-                          <span className="text-xs text-slate-500 mt-0.5">{product.brand}</span>
-                        )}
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-slate-500">
-                    {product.sku || <span className="text-slate-400 italic">No SKU</span>}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -353,42 +319,9 @@ export function ProductTable() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      {product.originalPrice && product.originalPrice > product.price ? (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-slate-700">₹{product.price.toFixed(2)}</span>
-                            <span className="text-xs text-slate-400 line-through">₹{product.originalPrice.toFixed(2)}</span>
-                          </div>
-                          {product.discount && product.discount > 0 && (
-                            <span className="text-[10px] text-emerald-600 font-medium">{product.discount}% off</span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-medium text-sm text-slate-700">₹{product.price?.toFixed(2) || "0.00"}</span>
-                          {product.discount && product.discount > 0 && (
-                            <span className="text-[10px] text-emerald-600 font-medium">{product.discount}% off</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`font-medium text-sm ${
-                          product.stock === undefined || product.stock === null
-                            ? "text-slate-400"
-                            : product.stock < (product.minStock || 10)
-                            ? "text-amber-600"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {product.stock !== undefined && product.stock !== null ? product.stock : "N/A"}
-                      </span>
-                      {product.unit && <span className="text-xs text-muted-foreground">{product.unit}</span>}
-                    </div>
+                    <span className="text-sm text-slate-700">
+                      {product.size ? `${product.size} ${product.unit || ''}` : product.unit || '-'}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={getStatus(product)} />
@@ -413,8 +346,11 @@ export function ProductTable() {
                         >
                           <Pencil className="mr-2 h-3.5 w-3.5 text-slate-500" /> Edit Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <PackageOpen className="mr-2 h-3.5 w-3.5 text-slate-500" /> Manage Stock
+                        <DropdownMenuItem 
+                          className="cursor-pointer"
+                          onClick={() => router.push(`/products/${product._id}/batches`)}
+                        >
+                          <PackageOpen className="mr-2 h-3.5 w-3.5 text-slate-500" /> Manage Batches
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -430,7 +366,7 @@ export function ProductTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
                     <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
                       <Search className="h-6 w-6 text-slate-300" />
@@ -510,13 +446,6 @@ function StatusBadge({ status }: { status: string }) {
     return (
       <Badge className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200 shadow-none font-medium px-2 py-0.5">
         Active
-      </Badge>
-    )
-  }
-  if (status === "out_of_stock") {
-    return (
-      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-medium px-2 py-0.5">
-        Out of Stock
       </Badge>
     )
   }
