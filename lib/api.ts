@@ -164,16 +164,28 @@ export const categoryAPI = {
 // Hero Banner API
 export const heroBannerAPI = {
   // Get all hero banners
-  getAll: async (includeInactive?: boolean) => {
+  getAll: async (params?: { includeInactive?: boolean; storeId?: string }) => {
+    const queryParams: any = {}
+    if (params?.includeInactive !== undefined) queryParams.includeInactive = params.includeInactive.toString()
+    if (params?.storeId) queryParams.storeId = params.storeId
     const response = await apiClient.get('/hero-banners', {
-      params: { includeInactive },
+      params: queryParams,
     })
     return response.data
   },
 
   // Get active hero banners
-  getActive: async () => {
-    const response = await apiClient.get('/hero-banners/active')
+  getActive: async (storeId?: string) => {
+    const params = storeId ? { storeId } : undefined
+    const response = await apiClient.get('/hero-banners/active', { params })
+    return response.data
+  },
+
+  // Get banners by store ID
+  getByStore: async (storeId: string, includeInactive?: boolean) => {
+    const params: any = {}
+    if (includeInactive !== undefined) params.includeInactive = includeInactive.toString()
+    const response = await apiClient.get(`/hero-banners/store/${storeId}`, { params })
     return response.data
   },
 
@@ -216,51 +228,201 @@ export const heroBannerAPI = {
   },
 }
 
-// ProductBatch API
-export const productBatchAPI = {
-  // Get all batches with pagination and filters
+
+// Store API
+export const storeAPI = {
+  // Get all stores
+  getAll: async (params?: { isActive?: boolean }) => {
+    const queryParams: any = {}
+    if (params?.isActive !== undefined) queryParams.isActive = params.isActive.toString()
+    const response = await apiClient.get('/stores', { params: queryParams })
+    return response.data
+  },
+
+  // Get store by ID
+  getById: async (id: string) => {
+    try {
+      const response = await apiClient.get(`/stores/${id}`)
+      return response.data
+    } catch (error: any) {
+      // Re-throw with more context
+      if (error.response) {
+        throw error
+      }
+      throw new Error(`Failed to fetch store: ${error.message}`)
+    }
+  },
+
+  // Create store
+  create: async (storeData: any) => {
+    const response = await apiClient.post('/stores', storeData)
+    return response.data
+  },
+
+  // Update store
+  update: async (id: string, storeData: any) => {
+    const response = await apiClient.put(`/stores/${id}`, storeData)
+    return response.data
+  },
+
+  // Delete store
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/stores/${id}`)
+    return response.data
+  },
+}
+
+// Store Product API
+export const storeProductAPI = {
+  // Get all store products
+  getAll: async (params?: { storeId?: string; productId?: string; page?: number; limit?: number }) => {
+    const queryParams: any = {}
+    if (params?.storeId) queryParams.storeId = params.storeId
+    if (params?.productId) queryParams.productId = params.productId
+    if (params?.page !== undefined) queryParams.page = params.page.toString()
+    if (params?.limit !== undefined) queryParams.limit = params.limit.toString()
+    const response = await apiClient.get('/store-products', { params: queryParams })
+    return response.data
+  },
+
+  // Get store products by store ID
+  getByStore: async (storeId: string) => {
+    const response = await apiClient.get(`/store-products/store/${storeId}`)
+    return response.data
+  },
+
+  // Get store product by ID
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/store-products/${id}`)
+    return response.data
+  },
+
+  // Create store product
+  create: async (storeProductData: any) => {
+    const response = await apiClient.post('/store-products', storeProductData)
+    return response.data
+  },
+
+  // Update store product
+  update: async (id: string, storeProductData: any) => {
+    const response = await apiClient.put(`/store-products/${id}`, storeProductData)
+    return response.data
+  },
+
+  // Delete store product
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/store-products/${id}`)
+    return response.data
+  },
+}
+
+// Inventory Batch API
+export const inventoryBatchAPI = {
+  // Get all inventory batches
+  getAll: async (params?: { storeId?: string; productId?: string; page?: number; limit?: number }) => {
+    const queryParams: any = {}
+    if (params?.storeId) queryParams.storeId = params.storeId
+    if (params?.productId) queryParams.productId = params.productId
+    if (params?.page !== undefined) queryParams.page = params.page.toString()
+    if (params?.limit !== undefined) queryParams.limit = params.limit.toString()
+    const response = await apiClient.get('/inventory-batches', { params: queryParams })
+    return response.data
+  },
+
+  // Get batches by store and product
+  getByStoreAndProduct: async (storeId: string, productId: string) => {
+    const response = await apiClient.get(`/inventory-batches/store/${storeId}/product/${productId}`)
+    return response.data
+  },
+
+  // Get inventory batch by ID
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/inventory-batches/${id}`)
+    return response.data
+  },
+
+  // Create inventory batch (GRN)
+  create: async (batchData: any) => {
+    const response = await apiClient.post('/inventory-batches', batchData)
+    return response.data
+  },
+
+  // Update inventory batch
+  update: async (id: string, batchData: any) => {
+    const response = await apiClient.put(`/inventory-batches/${id}`, batchData)
+    return response.data
+  },
+
+  // Delete inventory batch
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/inventory-batches/${id}`)
+    return response.data
+  },
+}
+
+// Order API
+export const orderAPI = {
+  // Get all orders (admin)
   getAll: async (params?: {
     page?: number
     limit?: number
-    product?: string
+    status?: string
+    storeId?: string
+    startDate?: string
+    endDate?: string
   }) => {
     const queryParams: any = {}
-    if (params) {
-      if (params.page !== undefined) queryParams.page = params.page.toString()
-      if (params.limit !== undefined) queryParams.limit = params.limit.toString()
-      if (params.product) queryParams.product = params.product
-    }
-    const response = await apiClient.get('/product-batches', { params: queryParams })
+    if (params?.page !== undefined) queryParams.page = params.page.toString()
+    if (params?.limit !== undefined) queryParams.limit = params.limit.toString()
+    if (params?.status) queryParams.status = params.status
+    if (params?.storeId) queryParams.storeId = params.storeId
+    if (params?.startDate) queryParams.startDate = params.startDate
+    if (params?.endDate) queryParams.endDate = params.endDate
+    const response = await apiClient.get('/orders', { params: queryParams })
     return response.data
   },
 
-  // Get batches by product ID
-  getByProduct: async (productId: string) => {
-    const response = await apiClient.get(`/product-batches/product/${productId}`)
-    return response.data
-  },
-
-  // Get batch by ID
+  // Get order by ID
   getById: async (id: string) => {
-    const response = await apiClient.get(`/product-batches/${id}`)
+    const response = await apiClient.get(`/orders/${id}`)
     return response.data
   },
 
-  // Create batch
-  create: async (batchData: any) => {
-    const response = await apiClient.post('/product-batches', batchData)
+  // Update order status
+  updateStatus: async (id: string, status: string) => {
+    const response = await apiClient.put(`/orders/${id}/status`, { status })
+    return response.data
+  },
+}
+
+// User API
+export const userAPI = {
+  // Get all users (admin)
+  getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string }) => {
+    const queryParams: any = {}
+    if (params?.page !== undefined) queryParams.page = params.page.toString()
+    if (params?.limit !== undefined) queryParams.limit = params.limit.toString()
+    if (params?.search) queryParams.search = params.search
+    if (params?.role) queryParams.role = params.role
+    const response = await apiClient.get('/users/admin/users', { params: queryParams })
     return response.data
   },
 
-  // Update batch
-  update: async (id: string, batchData: any) => {
-    const response = await apiClient.put(`/product-batches/${id}`, batchData)
+  // Get user by ID
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/users/${id}`)
     return response.data
   },
 
-  // Delete batch
-  delete: async (id: string) => {
-    const response = await apiClient.delete(`/product-batches/${id}`)
+  // Update user role
+  updateRole: async (userId: string, role: string) => {
+    const response = await apiClient.put(`/users/admin/users/${userId}/role`, { role })
+    return response.data
+  },
+
+  // Block/Unblock user
+  toggleBlock: async (userId: string, isBlocked: boolean) => {
+    const response = await apiClient.put(`/users/admin/users/${userId}/block`, { isBlocked })
     return response.data
   },
 }

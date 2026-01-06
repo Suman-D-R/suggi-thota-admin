@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Search, Image as ImageIcon, Loader2, X, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Search, Image as ImageIcon, Loader2, X, Pencil, Trash2, Store, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { heroBannerAPI } from "@/lib/api"
+import { heroBannerAPI, storeAPI } from "@/lib/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,25 +36,45 @@ interface HeroBanner {
   icon?: string
   image?: string
   link?: string
+  storeId?: string | { _id: string; name: string }
   isActive: boolean
   sortOrder: number
   createdAt?: string | Date
   updatedAt?: string | Date
 }
 
+interface Store {
+  _id: string
+  name: string
+}
+
 export function HeroBannerTable() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = React.useState("")
   const [banners, setBanners] = React.useState<HeroBanner[]>([])
+  const [stores, setStores] = React.useState<Store[]>([])
   const [loading, setLoading] = React.useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [bannerToDelete, setBannerToDelete] = React.useState<string | null>(null)
   const [deleting, setDeleting] = React.useState(false)
 
-  // Fetch banners on mount
+  // Fetch banners and stores on mount
   React.useEffect(() => {
     fetchBanners()
+    fetchStores()
   }, [])
+
+  const fetchStores = async () => {
+    try {
+      const response = await storeAPI.getAll({ isActive: true })
+      if (response.success && response.data) {
+        const storesData = Array.isArray(response.data) ? response.data : []
+        setStores(storesData)
+      }
+    } catch (error) {
+      console.error("Error fetching stores:", error)
+    }
+  }
 
   const fetchBanners = async () => {
     try {
@@ -103,6 +123,23 @@ export function HeroBannerTable() {
     banner.subtitle.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Helper function to get store name from banner
+  const getStoreName = (banner: HeroBanner): string => {
+    if (!banner.storeId) return "Global"
+    if (typeof banner.storeId === "string") {
+      const store = stores.find(s => s._id === banner.storeId)
+      return store?.name || "Unknown Store"
+    }
+    return banner.storeId.name || "Unknown Store"
+  }
+
+  // Helper function to get store ID from banner
+  const getStoreId = (banner: HeroBanner): string | null => {
+    if (!banner.storeId) return null
+    if (typeof banner.storeId === "string") return banner.storeId
+    return banner.storeId._id
+  }
+
   if (loading) {
     return (
       <Card className="p-8">
@@ -135,6 +172,7 @@ export function HeroBannerTable() {
                 <TableHead>Preview</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Subtitle</TableHead>
+                <TableHead>Store</TableHead>
                 <TableHead>Background</TableHead>
                 <TableHead>Order</TableHead>
                 <TableHead>Status</TableHead>
@@ -144,84 +182,108 @@ export function HeroBannerTable() {
             <TableBody>
               {filteredBanners.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {searchTerm ? "No banners found matching your search." : "No hero banners found."}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBanners.map((banner) => (
-                  <TableRow key={banner._id}>
-                    <TableCell>
-                      <div
-                        className="w-16 h-16 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: banner.backgroundColor }}
-                      >
-                        {banner.image ? (
-                          <img
-                            src={banner.image}
-                            alt={banner.title}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : banner.icon ? (
-                          <ImageIcon className="h-8 w-8 text-white" />
-                        ) : (
-                          <ImageIcon className="h-8 w-8 text-white opacity-50" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{banner.title}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">
-                      {banner.subtitle}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                filteredBanners.map((banner) => {
+                  const isGlobal = !banner.storeId
+                  const storeName = getStoreName(banner)
+                  
+                  return (
+                    <TableRow key={banner._id}>
+                      <TableCell>
                         <div
-                          className="w-6 h-6 rounded border border-slate-300"
+                          className="w-16 h-16 rounded-lg flex items-center justify-center"
                           style={{ backgroundColor: banner.backgroundColor }}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {banner.backgroundColor}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{banner.sortOrder}</TableCell>
-                    <TableCell>
-                      <Badge variant={banner.isActive ? "default" : "secondary"}>
-                        {banner.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => router.push(`/hero-banners/${banner._id}`)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setBannerToDelete(banner._id)
-                              setDeleteDialogOpen(true)
-                            }}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        >
+                          {banner.image ? (
+                            <img
+                              src={banner.image}
+                              alt={banner.title}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : banner.icon ? (
+                            <ImageIcon className="h-8 w-8 text-white" />
+                          ) : (
+                            <ImageIcon className="h-8 w-8 text-white opacity-50" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{banner.title}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-xs truncate">
+                        {banner.subtitle}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {isGlobal ? (
+                            <>
+                              <Globe className="h-4 w-4 text-blue-600" />
+                              <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                                Global
+                              </Badge>
+                            </>
+                          ) : (
+                            <>
+                              <Store className="h-4 w-4 text-emerald-600" />
+                              <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">
+                                {storeName}
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded border border-slate-300"
+                            style={{ backgroundColor: banner.backgroundColor }}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {banner.backgroundColor}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{banner.sortOrder}</TableCell>
+                      <TableCell>
+                        <Badge variant={banner.isActive ? "default" : "secondary"}>
+                          {banner.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/hero-banners/${banner._id}`)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setBannerToDelete(banner._id)
+                                setDeleteDialogOpen(true)
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

@@ -16,9 +16,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { orderAPI } from "@/lib/api"
 
-// Mock Data
-const orders = [
+interface Order {
+  id: string
+  orderNumber: string
+  customer: string
+  email: string
+  date: string
+  total: number
+  status: string
+  items: number
+}
+
+// Mock Data (fallback)
+const mockOrders = [
   {
     id: "ORD-001",
     orderNumber: "#12345",
@@ -92,6 +104,51 @@ const statusColors = {
 export function OrderTable() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
+  const [orders, setOrders] = React.useState<Order[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    loadOrders()
+  }, [])
+
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const response = await orderAPI.getAll({
+        page: 1,
+        limit: 100,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      })
+      
+      if (response.success && response.data) {
+        const allOrders = response.data
+        setOrders(allOrders.map((order: any) => ({
+          id: order.id || order._id,
+          orderNumber: order.orderNumber || `#${order._id?.slice(-6)}`,
+          customer: order.customer?.name || 'Unknown',
+          email: order.customer?.email || '',
+          date: order.createdAt || new Date().toISOString(),
+          total: order.total || 0,
+          status: order.status?.toLowerCase() || 'pending',
+          items: order.items?.length || 0,
+        })))
+      }
+    } catch (err: any) {
+      console.error('Failed to load orders:', err)
+      setError(err.message || 'Failed to load orders')
+      setOrders([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  React.useEffect(() => {
+    if (statusFilter) {
+      loadOrders()
+    }
+  }, [statusFilter])
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -116,6 +173,27 @@ export function OrderTable() {
       month: "short",
       year: "numeric",
     })
+  }
+
+  if (isLoading) {
+    return (
+      <Card className="border-none shadow-md bg-white overflow-hidden">
+        <div className="p-8 text-center">
+          <p className="text-slate-500">Loading orders...</p>
+        </div>
+      </Card>
+    )
+  }
+
+  if (error && orders.length === 0) {
+    return (
+      <Card className="border-none shadow-md bg-white overflow-hidden">
+        <div className="p-8 text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={loadOrders} variant="outline">Retry</Button>
+        </div>
+      </Card>
+    )
   }
 
   return (

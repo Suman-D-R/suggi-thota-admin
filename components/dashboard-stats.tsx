@@ -1,37 +1,37 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { DollarSign, ShoppingCart, Package, Users } from 'lucide-react';
+import { DollarSign, ShoppingCart, Package, AlertTriangle, TrendingUp, Store, XCircle } from 'lucide-react';
 import { ArrowUp } from 'lucide-react';
 
 const stats = [
   {
-    title: 'Total Revenue',
-    value: '₹45,231.89',
-    change: '+20.1% from last month',
-    icon: DollarSign,
-    iconColor: 'text-emerald-600',
-  },
-  {
-    title: 'Orders',
-    value: '+2350',
-    change: '+180.1% from last month',
+    title: "Today's Orders",
+    value: '24',
+    change: '+5 from yesterday',
     icon: ShoppingCart,
     iconColor: 'text-emerald-600',
   },
   {
-    title: 'Products',
-    value: '+12,234',
-    change: '+19% from last month',
-    icon: Package,
+    title: 'Live Orders',
+    value: '8',
+    change: 'In progress',
+    icon: TrendingUp,
+    iconColor: 'text-blue-600',
+  },
+  {
+    title: "Today's Revenue",
+    value: '₹45,231',
+    change: '+20.1% from yesterday',
+    icon: DollarSign,
     iconColor: 'text-emerald-600',
   },
   {
-    title: 'Active Users',
-    value: '+573',
-    change: '+201 since last hour',
-    icon: Users,
-    iconColor: 'text-emerald-600',
+    title: 'Low Stock Alerts',
+    value: '5',
+    change: 'Products need attention',
+    icon: AlertTriangle,
+    iconColor: 'text-orange-600',
   },
 ];
 

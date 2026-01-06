@@ -4,6 +4,8 @@ import axios from 'axios'
 const TOKEN_KEY = 'auth_token'
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry'
 const REFRESH_TOKEN_KEY = 'refresh_token'
+const REMEMBERED_EMAIL_KEY = 'remembered_email'
+const REMEMBERED_PASSWORD_KEY = 'remembered_password'
 
 // API base URL - can be overridden with environment variable
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
@@ -96,6 +98,76 @@ export function clearAuthToken(): void {
     localStorage.removeItem(REFRESH_TOKEN_KEY)
     // Also clear cookie
     document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  }
+}
+
+/**
+ * Save remembered credentials (email and password)
+ * Note: Storing password in localStorage is for convenience only
+ */
+export function saveRememberedCredentials(email: string, password: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
+    localStorage.setItem(REMEMBERED_PASSWORD_KEY, password)
+  }
+}
+
+/**
+ * Get remembered credentials
+ */
+export function getRememberedCredentials(): { email: string; password: string } | null {
+  if (typeof window === 'undefined') return null
+  
+  const email = localStorage.getItem(REMEMBERED_EMAIL_KEY)
+  const password = localStorage.getItem(REMEMBERED_PASSWORD_KEY)
+  
+  if (email && password) {
+    return { email, password }
+  }
+  
+  return null
+}
+
+/**
+ * Clear remembered credentials
+ */
+export function clearRememberedCredentials(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY)
+    localStorage.removeItem(REMEMBERED_PASSWORD_KEY)
+  }
+}
+
+/**
+ * Logout function - clears tokens and optionally calls backend
+ */
+export async function logout(): Promise<void> {
+  try {
+    // Optionally call backend logout API (non-blocking)
+    const token = getAuthToken()
+    if (token) {
+      try {
+        await axios.post(
+          `${API_BASE_URL}/auth/logout`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+      } catch (error) {
+        // Ignore errors from backend logout - we'll clear tokens anyway
+        console.warn('Backend logout failed, clearing tokens locally')
+      }
+    }
+  } catch (error) {
+    // Ignore errors - we'll clear tokens anyway
+  } finally {
+    // Always clear tokens and credentials from client
+    clearAuthToken()
+    clearRememberedCredentials()
   }
 }
 

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { adminLogin, isTokenValid } from "@/lib/auth"
+import { adminLogin, isTokenValid, saveRememberedCredentials, getRememberedCredentials, clearRememberedCredentials } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -27,6 +27,16 @@ export default function LoginPage() {
     }
   }, [router])
 
+  // Load remembered credentials on mount
+  React.useEffect(() => {
+    const remembered = getRememberedCredentials()
+    if (remembered) {
+      setEmail(remembered.email)
+      setPassword(remembered.password)
+      setRememberMe(true)
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -37,6 +47,13 @@ export default function LoginPage() {
       const result = await adminLogin(email, password)
       
       if (result.success && result.token) {
+        // Handle remember me functionality
+        if (rememberMe) {
+          saveRememberedCredentials(email, password)
+        } else {
+          clearRememberedCredentials()
+        }
+        
         // Token is already stored by adminLogin function
         // Redirect to dashboard with full page reload to ensure cookie is available
         window.location.href = "/"
@@ -135,7 +152,13 @@ export default function LoginPage() {
                     <Checkbox
                       id="remember"
                       checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked === true)}
+                      onCheckedChange={(checked) => {
+                        setRememberMe(checked === true)
+                        // Clear saved credentials if user unchecks remember me
+                        if (!checked) {
+                          clearRememberedCredentials()
+                        }
+                      }}
                       className="border-slate-300 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                     />
                     <Label
