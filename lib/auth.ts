@@ -192,8 +192,9 @@ export async function adminLogin(loginId: string, password: string): Promise<Log
     if (response.data.success && response.data.data) {
       const { user, tokens } = response.data.data
       
-      // Store access token (15 minutes expiry)
-      setAuthToken(tokens.accessToken, 15 * 60)
+      // Store access token (24 hours expiry to match backend)
+      // Backend token expires in 24h, so we set client expiry to 24 hours (86400 seconds)
+      setAuthToken(tokens.accessToken, 24 * 60 * 60)
       
       // Store refresh token
       setRefreshToken(tokens.refreshToken)

@@ -389,8 +389,24 @@ export const orderAPI = {
   },
 
   // Update order status
-  updateStatus: async (id: string, status: string) => {
-    const response = await apiClient.put(`/orders/${id}/status`, { status })
+  updateStatus: async (id: string, status: string, cancelReason?: string) => {
+    const payload: any = { status };
+    if (cancelReason) {
+      payload.cancelReason = cancelReason;
+    }
+    const response = await apiClient.put(`/orders/${id}/status`, payload)
+    return response.data
+  },
+
+  // Assign delivery partner
+  assignDeliveryPartner: async (id: string, deliveryPartnerId: string) => {
+    const response = await apiClient.post(`/orders/${id}/assign-delivery-partner`, { deliveryPartnerId })
+    return response.data
+  },
+
+  // Collect COD payment
+  collectPayment: async (id: string, notes?: string) => {
+    const response = await apiClient.post(`/orders/${id}/collect-payment`, { notes })
     return response.data
   },
 }
@@ -423,6 +439,50 @@ export const userAPI = {
   // Block/Unblock user
   toggleBlock: async (userId: string, isBlocked: boolean) => {
     const response = await apiClient.put(`/users/admin/users/${userId}/block`, { isBlocked })
+    return response.data
+  },
+}
+
+// Delivery Agent API
+export const deliveryAgentAPI = {
+  // Create delivery agent
+  create: async (agentData: {
+    name: string
+    phone: string
+    email?: string
+    password: string
+    storeId: string
+  }) => {
+    const response = await apiClient.post('/deliveries/agents', agentData)
+    return response.data
+  },
+
+  // Get all delivery agents
+  getAll: async (params?: { page?: number; limit?: number; search?: string; isActive?: boolean }) => {
+    const queryParams: any = {}
+    if (params?.page !== undefined) queryParams.page = params.page.toString()
+    if (params?.limit !== undefined) queryParams.limit = params.limit.toString()
+    if (params?.search) queryParams.search = params.search
+    if (params?.isActive !== undefined) queryParams.isActive = params.isActive.toString()
+    const response = await apiClient.get('/deliveries/agents', { params: queryParams })
+    return response.data
+  },
+
+  // Get delivery agent by ID
+  getById: async (id: string) => {
+    const response = await apiClient.get(`/deliveries/agents/${id}`)
+    return response.data
+  },
+
+  // Update delivery agent
+  update: async (id: string, agentData: { name?: string; email?: string; isActive?: boolean }) => {
+    const response = await apiClient.put(`/deliveries/agents/${id}`, agentData)
+    return response.data
+  },
+
+  // Delete delivery agent
+  delete: async (id: string) => {
+    const response = await apiClient.delete(`/deliveries/agents/${id}`)
     return response.data
   },
 }

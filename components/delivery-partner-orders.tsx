@@ -20,6 +20,7 @@ import {
   MapPin,
   CreditCard,
   RefreshCw,
+  DollarSign,
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,12 +28,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { orderAPI } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { OrderStatusStepper } from '@/components/order-status-stepper';
 
-interface LiveOrder {
+interface DeliveryOrder {
   id: string;
   orderNumber: string;
   customer: {
@@ -40,6 +41,7 @@ interface LiveOrder {
     phone: string;
     email: string;
   };
+  store: string;
   items: Array<{
     product: string;
     variant: string;
@@ -47,67 +49,40 @@ interface LiveOrder {
     price: number;
   }>;
   total: number;
-  status:
-    | 'pending'
-    | 'confirmed'
-    | 'preparing'
-    | 'ready'
-    | 'out_for_delivery'
-    | 'delivered'
-    | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
   paymentStatus: 'paid' | 'pending' | 'failed';
   paymentMethod?: 'cod' | 'online' | 'wallet';
-  deliveryPartner?: string;
   deliveryAddress?: any;
   timeElapsed: string;
-  store: string;
 }
 
-export function LiveOrdersTable() {
-  const [liveOrders, setLiveOrders] = React.useState<LiveOrder[]>([]);
+export function DeliveryPartnerOrders() {
+  const [orders, setOrders] = React.useState<DeliveryOrder[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(
-    null
-  );
-
-  React.useEffect(() => {
-    loadOrders();
-  }, []);
+  const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null);
+  const { toast } = useToast();
 
   const loadOrders = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      // Get live orders (pending, confirmed, preparing, ready, out_for_delivery)
+      // Get orders assigned to this delivery partner
       const response = await orderAPI.getAll({
         page: 1,
         limit: 100,
-        status: undefined, // Get all statuses, we'll filter client-side
+        status: undefined, // Get all statuses
       });
 
       if (response.success && response.data) {
         const allOrders = response.data;
-        // Filter for live orders (not delivered, cancelled, or refunded)
-        // But keep the currently selected order even if it's delivered (to keep dialog open)
-        const liveStatuses = [
-          'pending',
-          'confirmed',
-          'preparing',
-          'ready',
-          'out_for_delivery',
-        ];
-        const filtered = allOrders.filter((order: any) => {
-          const orderId = order.id || order._id;
-          const isLiveStatus = liveStatuses.includes(
-            order.status?.toLowerCase()
-          );
-          const isSelectedOrder = selectedOrderId === orderId;
-          // Keep order if it's live status OR if it's the currently selected order
-          return isLiveStatus || isSelectedOrder;
-        });
+        // Filter for active orders (not delivered or cancelled)
+        const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'];
+        const filtered = allOrders.filter((order: any) =>
+          activeStatuses.includes(order.status?.toLowerCase())
+        );
 
-        setLiveOrders(
+        setOrders(
           filtered.map((order: any) => ({
             id: order.id || order._id,
             orderNumber: order.orderNumber || `#${order._id?.slice(-6)}`,
@@ -117,7 +92,6 @@ export function LiveOrdersTable() {
               email: order.customer?.email || '',
             },
             items: (order.items || []).map((item: any) => {
-              // Handle different item formats from API
               const productName =
                 typeof item.product === 'string'
                   ? item.product
@@ -141,7 +115,6 @@ export function LiveOrdersTable() {
             status: order.status?.toLowerCase() || 'pending',
             paymentStatus: order.paymentStatus?.toLowerCase() || 'pending',
             paymentMethod: order.paymentMethod?.toLowerCase() || 'cod',
-            deliveryPartner: order.deliveryPartner || undefined,
             deliveryAddress: order.deliveryAddress,
             timeElapsed: order.timeElapsed || '0 min',
             store: order.store || 'Unknown Store',
@@ -151,23 +124,15 @@ export function LiveOrdersTable() {
     } catch (err: any) {
       console.error('Failed to load orders:', err);
       setError(err.message || 'Failed to load orders');
-      setLiveOrders([]);
+      setOrders([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStatusUpdate = (orderId: string, newStatus: string) => {
-    // Reload orders to get fresh data after status update
-    // Keep the dialog open by preserving selectedOrderId
-    // The loadOrders function will keep the selected order in the list even if status changes
+  React.useEffect(() => {
     loadOrders();
-  };
-
-  const handlePaymentCollected = () => {
-    // Reload orders to get fresh data after payment collection
-    loadOrders();
-  };
+  }, []);
 
   // Auto-refresh orders every 30 seconds
   React.useEffect(() => {
@@ -179,6 +144,16 @@ export function LiveOrdersTable() {
       return () => clearInterval(interval);
     }
   }, [isLoading]);
+
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    // Reload orders to get fresh data after status update
+    loadOrders();
+  };
+
+  const handlePaymentCollected = () => {
+    // Reload orders to get fresh data after payment collection
+    loadOrders();
+  };
 
   const statusConfig: Record<
     string,
@@ -204,20 +179,15 @@ export function LiveOrdersTable() {
       color: 'bg-indigo-100 text-indigo-700',
       icon: Package,
     },
-    picking: {
-      label: 'Picking',
-      color: 'bg-blue-100 text-blue-700',
-      icon: Package,
-    },
-    packing: {
-      label: 'Packing',
-      color: 'bg-purple-100 text-purple-700',
-      icon: Package,
-    },
     out_for_delivery: {
       label: 'Out for Delivery',
       color: 'bg-green-100 text-green-700',
       icon: Truck,
+    },
+    delivered: {
+      label: 'Delivered',
+      color: 'bg-emerald-100 text-emerald-700',
+      icon: Package,
     },
   };
 
@@ -231,7 +201,7 @@ export function LiveOrdersTable() {
     );
   }
 
-  if (error && liveOrders.length === 0) {
+  if (error && orders.length === 0) {
     return (
       <Card className='border-none shadow-md bg-white overflow-hidden'>
         <div className='p-8 text-center'>
@@ -248,9 +218,9 @@ export function LiveOrdersTable() {
     <Card className='border-none shadow-md bg-white overflow-hidden'>
       <div className='p-4 border-b flex items-center justify-between'>
         <div>
-          <h3 className='font-semibold text-slate-900'>Live Orders</h3>
+          <h3 className='font-semibold text-slate-900'>My Assigned Orders</h3>
           <p className='text-xs text-slate-500 mt-1'>
-            {liveOrders.length} active order{liveOrders.length !== 1 ? 's' : ''}
+            {orders.length} active order{orders.length !== 1 ? 's' : ''}
           </p>
         </div>
         <Button
@@ -284,9 +254,6 @@ export function LiveOrdersTable() {
                 Payment
               </TableHead>
               <TableHead className='text-xs font-semibold uppercase tracking-wider text-slate-500 h-12'>
-                Delivery Partner
-              </TableHead>
-              <TableHead className='text-xs font-semibold uppercase tracking-wider text-slate-500 h-12'>
                 Time
               </TableHead>
               <TableHead className='text-xs font-semibold uppercase tracking-wider text-slate-500 text-right pr-6 h-12'>
@@ -295,16 +262,16 @@ export function LiveOrdersTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {liveOrders.length === 0 ? (
+            {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className='h-24 text-center'>
+                <TableCell colSpan={7} className='h-24 text-center'>
                   <p className='text-sm text-slate-500'>
-                    No live orders found.
+                    No assigned orders found.
                   </p>
                 </TableCell>
               </TableRow>
             ) : (
-              liveOrders.map((order) => {
+              orders.map((order) => {
                 const config =
                   statusConfig[order.status] || statusConfig.pending;
                 return (
@@ -346,29 +313,30 @@ export function LiveOrdersTable() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant='secondary'
-                        className={
-                          order.paymentStatus === 'paid'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : order.paymentStatus === 'pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'
-                        }
-                      >
-                        {order.paymentStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {order.deliveryPartner ? (
-                        <span className='text-sm text-slate-700'>
-                          {order.deliveryPartner}
-                        </span>
-                      ) : (
-                        <Button variant='outline' size='sm'>
-                          Assign
-                        </Button>
-                      )}
+                      <div className='flex flex-col gap-1'>
+                        <Badge
+                          variant='secondary'
+                          className={
+                            order.paymentStatus === 'paid'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : order.paymentStatus === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }
+                        >
+                          {order.paymentStatus}
+                        </Badge>
+                        {order.paymentMethod === 'cod' &&
+                          order.paymentStatus === 'pending' && (
+                            <Badge
+                              variant='outline'
+                              className='text-xs border-amber-300 text-amber-700'
+                            >
+                              <DollarSign className='h-3 w-3 mr-1' />
+                              Collect Payment
+                            </Badge>
+                          )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <span className='text-sm text-slate-600'>
@@ -384,35 +352,27 @@ export function LiveOrdersTable() {
                           }
                         }}
                       >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => setSelectedOrderId(order.id)}
-                          >
-                            Manage Status
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent
-                          className='max-w-3xl max-h-[90vh] overflow-y-auto'
-                          onInteractOutside={(e) => {
-                            // Prevent closing on outside click if needed
-                            // e.preventDefault();
-                          }}
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => setSelectedOrderId(order.id)}
                         >
+                          Manage Order
+                        </Button>
+                        <DialogContent className='max-w-3xl max-h-[90vh] overflow-y-auto'>
                           <DialogHeader>
                             <DialogTitle>
                               Order Management - {order.orderNumber}
                             </DialogTitle>
                             <DialogDescription>
-                              Manage order status and view details
+                              Update order status and collect payment
                             </DialogDescription>
                           </DialogHeader>
                           <div className='space-y-6'>
                             {/* Status Stepper */}
                             <div className='border rounded-lg p-4 bg-slate-50'>
                               <h3 className='font-semibold mb-4 text-sm uppercase tracking-wide text-slate-700'>
-                                Order Status Workflow
+                                Order Status
                               </h3>
                               <OrderStatusStepper
                                 orderId={order.id}
@@ -421,14 +381,10 @@ export function LiveOrdersTable() {
                                 paymentMethod={order.paymentMethod}
                                 paymentStatus={order.paymentStatus}
                                 orderTotal={order.total}
-                                deliveryPartner={order.deliveryPartner}
                                 onStatusUpdate={(newStatus) =>
                                   handleStatusUpdate(order.id, newStatus)
                                 }
                                 onPaymentCollected={handlePaymentCollected}
-                                onDeliveryPartnerAssigned={
-                                  handlePaymentCollected
-                                }
                               />
                             </div>
 
@@ -461,85 +417,58 @@ export function LiveOrdersTable() {
                                 </h3>
                                 <div className='text-sm text-slate-600 space-y-1'>
                                   {order.deliveryAddress ? (
-                                    typeof order.deliveryAddress ===
-                                    'string' ? (
+                                    typeof order.deliveryAddress === 'string' ? (
                                       <p>{order.deliveryAddress}</p>
                                     ) : (
                                       <div>
-                                        {(order.deliveryAddress as any)
-                                          .label && (
+                                        {(order.deliveryAddress as any).label && (
                                           <p className='font-medium'>
-                                            {
-                                              (order.deliveryAddress as any)
-                                                .label
-                                            }
+                                            {(order.deliveryAddress as any).label}
                                           </p>
                                         )}
                                         <p>
-                                          {(order.deliveryAddress as any)
-                                            .street || ''}
+                                          {(order.deliveryAddress as any).street || ''}
                                         </p>
                                         <p>
-                                          {(order.deliveryAddress as any)
-                                            .city || ''}
+                                          {(order.deliveryAddress as any).city || ''}
                                           {(order.deliveryAddress as any).state
                                             ? `, ${
-                                                (order.deliveryAddress as any)
-                                                  .state
+                                                (order.deliveryAddress as any).state
                                               }`
                                             : ''}
-                                          {(order.deliveryAddress as any)
-                                            .pincode
+                                          {(order.deliveryAddress as any).pincode
                                             ? ` - ${
-                                                (order.deliveryAddress as any)
-                                                  .pincode
+                                                (order.deliveryAddress as any).pincode
                                               }`
                                             : ''}
                                         </p>
-                                        {(order.deliveryAddress as any)
-                                          .contactName && (
+                                        {(order.deliveryAddress as any).contactName && (
                                           <p className='mt-1'>
                                             <span className='font-medium'>
                                               Contact:
                                             </span>{' '}
-                                            {
-                                              (order.deliveryAddress as any)
-                                                .contactName
-                                            }
-                                            {(order.deliveryAddress as any)
-                                              .contactPhone
+                                            {(order.deliveryAddress as any).contactName}
+                                            {(order.deliveryAddress as any).contactPhone
                                               ? ` - ${
-                                                  (order.deliveryAddress as any)
-                                                    .contactPhone
+                                                  (order.deliveryAddress as any).contactPhone
                                                 }`
                                               : ''}
                                           </p>
                                         )}
-                                        {(order.deliveryAddress as any)
-                                          .coordinates && (
+                                        {(order.deliveryAddress as any).coordinates && (
                                           <div className='mt-2 pt-2 border-t border-slate-200'>
                                             <p className='text-xs text-slate-500 mb-1'>
                                               📍 Location:{' '}
                                               {(
                                                 order.deliveryAddress as any
-                                              ).coordinates.latitude?.toFixed(
-                                                6
-                                              )}
+                                              ).coordinates.latitude?.toFixed(6)}
                                               ,{' '}
                                               {(
                                                 order.deliveryAddress as any
-                                              ).coordinates.longitude?.toFixed(
-                                                6
-                                              )}
+                                              ).coordinates.longitude?.toFixed(6)}
                                             </p>
                                             <a
-                                              href={`https://www.google.com/maps?q=${
-                                                (order.deliveryAddress as any)
-                                                  .coordinates.latitude
-                                              },${
-                                                (order.deliveryAddress as any)
-                                                  .coordinates.longitude
-                                              }`}
+                                              href={`https://www.google.com/maps?q=${(order.deliveryAddress as any).coordinates.latitude},${(order.deliveryAddress as any).coordinates.longitude}`}
                                               target='_blank'
                                               rel='noopener noreferrer'
                                               className='text-xs text-blue-600 hover:underline'
@@ -573,10 +502,7 @@ export function LiveOrdersTable() {
                                         {item.quantity}
                                       </span>
                                       <span>
-                                        ₹
-                                        {(item.price * item.quantity).toFixed(
-                                          2
-                                        )}
+                                        ₹{(item.price * item.quantity).toFixed(2)}
                                       </span>
                                     </div>
                                   ))}
@@ -586,35 +512,6 @@ export function LiveOrdersTable() {
                                   </div>
                                 </div>
                               </div>
-                              <div>
-                                <h3 className='font-semibold mb-2 flex items-center gap-2'>
-                                  <CreditCard className='h-4 w-4' />
-                                  Payment Status
-                                </h3>
-                                <Badge
-                                  variant='secondary'
-                                  className={
-                                    order.paymentStatus === 'paid'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : order.paymentStatus === 'pending'
-                                      ? 'bg-yellow-100 text-yellow-700'
-                                      : 'bg-red-100 text-red-700'
-                                  }
-                                >
-                                  {order.paymentStatus}
-                                </Badge>
-                              </div>
-                              {order.deliveryPartner && (
-                                <div>
-                                  <h3 className='font-semibold mb-2 flex items-center gap-2'>
-                                    <Truck className='h-4 w-4' />
-                                    Delivery Partner
-                                  </h3>
-                                  <p className='text-sm'>
-                                    {order.deliveryPartner}
-                                  </p>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </DialogContent>
@@ -630,3 +527,4 @@ export function LiveOrdersTable() {
     </Card>
   );
 }
+
