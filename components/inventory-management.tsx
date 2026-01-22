@@ -52,6 +52,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +77,7 @@ interface StoreProductVariant {
   sellingPrice: number;
   discount: number;
   isAvailable: boolean;
+  maximumOrderLimit?: number;
 }
 
 interface StoreProduct {
@@ -178,6 +180,7 @@ export function InventoryManagement() {
       sellingPrice: number;
       discount: number;
       isAvailable: boolean;
+      maximumOrderLimit?: number;
     }>,
     isActive: true,
   });
@@ -493,6 +496,7 @@ export function InventoryManagement() {
           sellingPrice: 0,
           discount: 0,
           isAvailable: true,
+          maximumOrderLimit: undefined,
         },
       ],
     });
@@ -529,6 +533,7 @@ export function InventoryManagement() {
         sellingPrice: 0,
         discount: 0,
         isAvailable: true,
+        maximumOrderLimit: undefined,
       }));
       setFormData({ ...formData, productId, variants: initialVariants });
     } else {
@@ -1688,6 +1693,28 @@ export function InventoryManagement() {
                                   className='bg-slate-50'
                                 />
                               </div>
+                              <div className='space-y-2'>
+                                <Label>Maximum Order Limit</Label>
+                                <Input
+                                  type='number'
+                                  step='1'
+                                  min='1'
+                                  value={variant.maximumOrderLimit || ''}
+                                  onChange={(e) =>
+                                    handleVariantChange(
+                                      index,
+                                      'maximumOrderLimit',
+                                      e.target.value
+                                        ? parseFloat(e.target.value)
+                                        : undefined
+                                    )
+                                  }
+                                  placeholder='e.g., 10 (leave empty for no limit)'
+                                />
+                                <p className='text-xs text-muted-foreground'>
+                                  Max quantity allowed for this variant. Leave empty for no limit.
+                                </p>
+                              </div>
                             </div>
                           </Card>
                         ))}
@@ -1695,6 +1722,23 @@ export function InventoryManagement() {
                     )}
                   </div>
                 )}
+
+                {/* Active Status */}
+                <div className='flex items-center justify-between pt-4 border-t'>
+                  <div className='space-y-0.5'>
+                    <Label htmlFor='isActive'>Active</Label>
+                    <p className='text-sm text-muted-foreground'>
+                      Make this product available in the store
+                    </p>
+                  </div>
+                  <Switch
+                    id='isActive'
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, isActive: checked })
+                    }
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button

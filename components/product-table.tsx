@@ -342,7 +342,7 @@ export function ProductTable() {
                         <DropdownMenuItem
                           className='cursor-pointer'
                           onClick={() =>
-                            router.push(`/products/${product._id}`)
+                            router.push(`/global-products/${product._id}`)
                           }
                         >
                           <Pencil className='mr-2 h-3.5 w-3.5 text-slate-500' />{' '}

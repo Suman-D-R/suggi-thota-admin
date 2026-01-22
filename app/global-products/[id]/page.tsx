@@ -101,6 +101,7 @@ export default function ProductFormPage() {
       sellingPrice: number;
       discount: number;
       isAvailable: boolean;
+      maximumOrderLimit?: number;
     }>,
     isActive: true,
   });
@@ -110,6 +111,7 @@ export default function ProductFormPage() {
     name: '',
     description: '',
     category: '',
+    keywords: '',
   });
 
   // Fetch product data if in edit mode
@@ -152,6 +154,10 @@ export default function ProductFormPage() {
           name: product.name || '',
           description: product.description || '',
           category: categoryId || '',
+          keywords:
+            product.keywords && Array.isArray(product.keywords)
+              ? product.keywords.join(', ')
+              : '',
         });
 
         // Set existing images
@@ -278,6 +284,7 @@ export default function ProductFormPage() {
           sellingPrice: 0,
           discount: 0,
           isAvailable: true,
+          maximumOrderLimit: undefined,
         },
       ],
     });
@@ -447,13 +454,29 @@ export default function ProductFormPage() {
         formDataToSend.append('description', formData.description);
       }
       formDataToSend.append('category', formData.category);
+      if (formData.keywords && formData.keywords.trim()) {
+        // Send keywords as comma-separated string
+        formDataToSend.append('keywords', formData.keywords);
+      }
 
       // Add image files if uploaded
       imageFiles.forEach((file) => {
         formDataToSend.append('images', file);
       });
 
-      // Note: If updating and no new files are uploaded, existing images are kept automatically by the backend
+      // When updating, send existing image URLs if no new files are uploaded
+      // This ensures the backend knows which images to keep
+      if (
+        isEditMode &&
+        imageFiles.length === 0 &&
+        existingImageUrls.length > 0
+      ) {
+        // Send existing image URLs as JSON array string in a separate field
+        formDataToSend.append(
+          'existingImages',
+          JSON.stringify(existingImageUrls)
+        );
+      }
 
       const response =
         isEditMode && productId
@@ -567,6 +590,22 @@ export default function ProductFormPage() {
                     />
                     <p className='text-xs text-muted-foreground'>
                       {formData.description.length}/1000 characters
+                    </p>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='keywords'>Search Keywords</Label>
+                    <Input
+                      id='keywords'
+                      name='keywords'
+                      value={formData.keywords}
+                      onChange={handleInputChange}
+                      placeholder='e.g., atta, wheat flour, maida (comma-separated)'
+                    />
+                    <p className='text-xs text-muted-foreground'>
+                      Enter keywords separated by commas. These help users find
+                      products using synonyms, local terms, or common
+                      misspellings (e.g., "bannana" for "banana").
                     </p>
                   </div>
                 </CardContent>
@@ -983,6 +1022,31 @@ export default function ProductFormPage() {
                                               disabled
                                               className='bg-slate-50'
                                             />
+                                          </div>
+                                          <div className='space-y-2'>
+                                            <Label>Maximum Order Limit</Label>
+                                            <Input
+                                              type='number'
+                                              step='1'
+                                              min='1'
+                                              value={
+                                                variant.maximumOrderLimit || ''
+                                              }
+                                              onChange={(e) =>
+                                                handleVariantChange(
+                                                  index,
+                                                  'maximumOrderLimit',
+                                                  e.target.value
+                                                    ? parseFloat(e.target.value)
+                                                    : undefined
+                                                )
+                                              }
+                                              placeholder='e.g., 10 (leave empty for no limit)'
+                                            />
+                                            <p className='text-xs text-muted-foreground'>
+                                              Max quantity allowed for this
+                                              variant. Leave empty for no limit.
+                                            </p>
                                           </div>
                                         </div>
                                         <div className='mt-4 flex items-center justify-between'>

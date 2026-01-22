@@ -28,6 +28,7 @@ interface StoreProductVariant {
   sellingPrice: number;
   discount: number;
   isAvailable: boolean;
+  maximumOrderLimit?: number;
 }
 
 interface StoreProduct {
@@ -142,6 +143,7 @@ export function StoreProductForm({
       sellingPrice: 0,
       discount: 0,
       isAvailable: true,
+      maximumOrderLimit: undefined,
     };
     setFormData({
       ...formData,
@@ -540,6 +542,26 @@ export function StoreProductForm({
                           disabled
                           className='bg-slate-50'
                         />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label>Maximum Order Limit</Label>
+                        <Input
+                          type='number'
+                          step='1'
+                          min='1'
+                          value={variant.maximumOrderLimit || ''}
+                          onChange={(e) =>
+                            handleVariantChange(
+                              index,
+                              'maximumOrderLimit',
+                              e.target.value ? parseFloat(e.target.value) : undefined
+                            )
+                          }
+                          placeholder='e.g., 10 (leave empty for no limit)'
+                        />
+                        <p className='text-xs text-muted-foreground'>
+                          Max quantity allowed for this variant. Leave empty for no limit.
+                        </p>
                       </div>
                     </div>
                     <div className='mt-4 flex items-center space-x-2'>
